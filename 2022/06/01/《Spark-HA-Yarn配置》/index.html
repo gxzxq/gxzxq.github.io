@@ -67,12 +67,10 @@
 <article class="post markdown-style">
   <h1 id="七、spark-standalone-HA环境搭建（需要更新zookeeper版本，略）"><a href="#七、spark-standalone-HA环境搭建（需要更新zookeeper版本，略）" class="headerlink" title="七、spark standalone HA环境搭建（需要更新zookeeper版本，略）"></a>七、spark standalone HA环境搭建（需要更新zookeeper版本，略）</h1><p>前提: 确保Zookeeper 和 HDFS 均已经启动</p>
 <p>先在<code>spark-env.sh</code>中, <strong>删除</strong>: <code>SPARK_MASTER_HOST=node1</code></p>
-<p><img src="file:///C:/Users/dell/AppData/Local/Packages/oice_16_974fa576_32c1d314_1e42/AC/Temp/msohtmlclip1/01/clip_image034.jpg" alt="img"></p>
 <p>原因: 配置文件中固定master是谁, 那么就无法用到zk的动态切换master功能了.</p>
 <p>在<code>spark-env.sh</code>中, 增加:</p>
 <figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">SPARK_DAEMON_JAVA_OPTS=&quot;-Dspark.deploy.recoveryMode=ZOOKEEPER -Dspark.deploy.zookeeper.url=node1:2181,node2:2181,node3:2181 -Dspark.deploy.zookeeper.dir=/spark-ha&quot;</span><br><span class="line"></span><br><span class="line">\# spark.deploy.recoveryMode 指定HA模式 基于Zookeeper实现</span><br><span class="line"></span><br><span class="line">\# 指定Zookeeper的连接地址</span><br><span class="line"></span><br><span class="line">\# 指定在Zookeeper中注册临时节点的路径</span><br></pre></td></tr></table></figure>
 
-<p><img src="file:///C:/Users/dell/AppData/Local/Packages/oice_16_974fa576_32c1d314_1e42/AC/Temp/msohtmlclip1/01/clip_image036.jpg" alt="img"></p>
 <p>将spark-env.sh 分发到每一台服务器上</p>
 <figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">scp spark-env.sh node2:/export/server/spark/conf/</span><br><span class="line"></span><br><span class="line">scp spark-env.sh node3:/export/server/spark/conf/</span><br></pre></td></tr></table></figure>
 
@@ -87,14 +85,11 @@
 <figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">sbin/start-master.sh</span><br></pre></td></tr></table></figure>
 
 <p># 在node2上启动一个备用的master进程</p>
-<p><img src="file:///C:/Users/dell/AppData/Local/Packages/oice_16_974fa576_32c1d314_1e42/AC/Temp/msohtmlclip1/01/clip_image038.jpg" alt="img"></p>
-<p><img src="file:///C:/Users/dell/AppData/Local/Packages/oice_16_974fa576_32c1d314_1e42/AC/Temp/msohtmlclip1/01/clip_image040.jpg" alt="img"></p>
 <p>status：standby node2备用master状态是standby</p>
 <p>master主备切换</p>
 <p>提交一个spark任务到当前<code>alive</code>master上:</p>
 <figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">bin/spark-submit --master spark://node1:7077 /export/server/spark/examples/src/main/python/pi.py 1000</span><br></pre></td></tr></table></figure>
 
-<p><img src="file:///C:/Users/dell/AppData/Local/Packages/oice_16_974fa576_32c1d314_1e42/AC/Temp/msohtmlclip1/01/clip_image042.jpg" alt="img"></p>
 <p>在提交成功后, 将alivemaster直接kill掉</p>
 <p>不会影响程序运行:</p>
 <p>结论 HA模式下, 主备切换 不会影响到正在运行的程序.</p>
@@ -102,25 +97,15 @@
 <h1 id="八、Spark-On-YARN-环境搭建"><a href="#八、Spark-On-YARN-环境搭建" class="headerlink" title="八、Spark On YARN 环境搭建"></a>八、Spark On YARN 环境搭建</h1><p>前提：在spark-env.sh  以及 环境变量配置文件- HADOOP_CONF_DIR</p>
 <p>- YARN_CONF_DIR</p>
 <h2 id="1-启动yarn集群历史服务器"><a href="#1-启动yarn集群历史服务器" class="headerlink" title="1.启动yarn集群历史服务器"></a>1.启动yarn集群历史服务器</h2><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">cd /export/server/hadoop/sbin/</span><br><span class="line"></span><br><span class="line">./mr-jobhistory-daemon.sh start historyserver</span><br></pre></td></tr></table></figure>
-
-<p><img src="file:///C:/Users/dell/AppData/Local/Packages/oice_16_974fa576_32c1d314_1e42/AC/Temp/msohtmlclip1/01/clip_image044.jpg" alt="img"></p>
 <h2 id="2-在yarn上启动pyspark"><a href="#2-在yarn上启动pyspark" class="headerlink" title="2.在yarn上启动pyspark"></a>2.在yarn上启动pyspark</h2><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">cd /export/server/hadoop/etc/hadoop</span><br><span class="line"></span><br><span class="line">/export/server/spark/bin/pyspark --master yarn</span><br></pre></td></tr></table></figure>
 
-<p><img src="file:///C:/Users/dell/AppData/Local/Packages/oice_16_974fa576_32c1d314_1e42/AC/Temp/msohtmlclip1/01/clip_image046.jpg" alt="img"></p>
+
 <p>执行测试命令 sc.parallelize([1,2,3,4,5]).map(lambda x: x*10).collect()</p>
-<p><img src="file:///C:/Users/dell/AppData/Local/Packages/oice_16_974fa576_32c1d314_1e42/AC/Temp/msohtmlclip1/01/clip_image048.jpg" alt="img"></p>
 <p>&#x2F;export&#x2F;server&#x2F;spark目录下执行</p>
 <figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">bin/spark-submit --master yarn /export/server/spark/examples/src/main/python/pi.py 10</span><br></pre></td></tr></table></figure>
-
-<p><img src="file:///C:/Users/dell/AppData/Local/Packages/oice_16_974fa576_32c1d314_1e42/AC/Temp/msohtmlclip1/01/clip_image050.jpg" alt="img"></p>
-<p><img src="file:///C:/Users/dell/AppData/Local/Packages/oice_16_974fa576_32c1d314_1e42/AC/Temp/msohtmlclip1/01/clip_image052.jpg" alt="img"></p>
-<h2 id="3-验证client模式"><a href="#3-验证client模式" class="headerlink" title="3.验证client模式"></a>3.验证client模式</h2><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">/export/server/spark/bin/spark-submit --master yarn --deploy-mode client --driver-memory 512m --executor-memory 512m --num-executors 3 --total-executor-cores 3 /export/server/spark/examples/src/main/python/pi.py 3</span><br></pre></td></tr></table></figure>
-
-<p><img src="file:///C:/Users/dell/AppData/Local/Packages/oice_16_974fa576_32c1d314_1e42/AC/Temp/msohtmlclip1/01/clip_image054.jpg" alt="img"></p>
-<p><img src="file:///C:/Users/dell/AppData/Local/Packages/oice_16_974fa576_32c1d314_1e42/AC/Temp/msohtmlclip1/01/clip_image056.jpg" alt="img"></p>
-<h2 id="4-验证cluster模式"><a href="#4-验证cluster模式" class="headerlink" title="4.验证cluster模式"></a>4.验证cluster模式</h2><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">/export/server/spark/bin/spark-submit --master yarn --deploy-mode cluster --driver-memory 512m --executor-memory 512m --num-executors 3 --total-executor-cores 3 /export/server/spark/examples/src/main/python/pi.py 3</span><br></pre></td></tr></table></figure>
-
-<p><img src="file:///C:/Users/dell/AppData/Local/Packages/oice_16_974fa576_32c1d314_1e42/AC/Temp/msohtmlclip1/01/clip_image058.jpg" alt="img"></p>
+<h2 id="3-验证client模式"><a href="#3-验证client模式" class="headerlink" title="3.验证client模式"></a>3.验证client模式</h2><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">/export/server/spark/bin/spark-submit --master yarn --deploy-mode client --driver-memory 512m --executor-memory 512m --num-executors 3 --total-executor-cores 3 /export/server/spark/examples/src/main/python/pi.py 3</span><br><span class="line">``</span><br><span class="line">## 4.验证cluster模式</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+<p>&#x2F;export&#x2F;server&#x2F;spark&#x2F;bin&#x2F;spark-submit –master yarn –deploy-mode cluster –driver-memory 512m –executor-memory 512m –num-executors 3 –total-executor-cores 3 &#x2F;export&#x2F;server&#x2F;spark&#x2F;examples&#x2F;src&#x2F;main&#x2F;python&#x2F;pi.py 3</p>
+<p>&#96;&#96;&#96;</p>
 <p>至此基础环境-&gt;JDK-&gt;Hadoop-&gt;Zookeeper-&gt;Spark(local)-&gt;Spark(stand-alone) -&gt;Spark(HA)-&gt;Spark(Yarn)已全部配置完成。</p>
 
 </article>
